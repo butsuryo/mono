@@ -43,37 +43,18 @@ public class Mono {
 		System.out.println("start.");
 		System.out.println();
 
-		// 初期設定 TODO エラーハンドリング
-		System.out.println("デフォルト設定(10×10、使用マーク□,○,△)で始めます。OKであればy、設定を変更して遊ぶ場合はnを入力してください。");
-		try {
-			 BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
-			 String input = new String(in.readLine());
+		// 初期設定
+		init();
 
-			 if (StringUtils.equals("n", StringUtils.lowerCase(input))) {
-				 System.out.println("行数(縦)を入力してください。");
-				 boardHeight = Integer.parseInt(in.readLine());
-
-				 System.out.println("列数(横)を入力してください。");
-				 boardWidth = Integer.parseInt(in.readLine());
-
-				 System.out.println("使用するマークを半角カンマ区切りで入力してください。");
-				 USE_MARKS = new ArrayList<String>(Arrays.asList(in.readLine().split(",")));
-			 }
-		} catch (IOException e) {
-			// do nothing;
-		}
-
-
-		// 新規作成
+		// ゲームボードをランダムで新規作成
 		for (int i=1; i<=boardHeight; i++) {
 			for (int j=1; j<=boardWidth; j++) {
-				list.add(new MarkData(i, j, getMarkIndex(), USE_MARKS));
+				list.add(new MarkData(i, j, getRandomMarkIndex(), USE_MARKS));
 			}
 		}
 
 		// 初回出力
 		output();
-		System.out.println();
 
 		// 入力受付
 		while(true){
@@ -88,6 +69,78 @@ public class Mono {
 				System.out.println("これ以上消せません。終了します。");
 				System.exit(0);
 			}
+		}
+	}
+
+	/**
+	 * ゲームの初期設定を促す
+	 * 縦行、横列、使用マーク種類を定義可能。
+	 */
+	private static void init() {
+		System.out.println("デフォルト設定(10×10、使用マーク□,○,△)で始めます。OKであればy、設定を変更して遊ぶ場合はnを入力してください。");
+
+		boolean setRow = false;
+		boolean setColumn = false;
+		boolean isErr = false;
+
+		try {
+			BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+			String input = new String(in.readLine());
+
+			 if (StringUtils.equals("n", StringUtils.lowerCase(input))) {
+				 while (true) {
+					 if (!setRow) {
+						 if (!isErr) {
+							 System.out.println("行数(縦)を入力してください。");
+						 }
+						 String row = in.readLine();
+						 if (!checkNumber(row)) {
+							 System.err.println("数値で入力してください。");
+							 isErr = true;
+							 continue;
+						 }
+						 boardHeight = Integer.parseInt(row);
+						 setRow = true;
+						 isErr = false;
+					 }
+
+					 if (!setColumn) {
+						 if (!isErr) {
+							 System.out.println("列数(横)を入力してください。");
+						 }
+						 String column = in.readLine();
+						 if (!checkNumber(column)) {
+							 System.err.println("半角数値で入力してください。");
+							 isErr = true;
+							 continue;
+						 }
+						 boardWidth = Integer.parseInt(column);
+						 setColumn = true;
+						 isErr = false;
+					 }
+
+					 if (!isErr) {
+						 System.out.println("使用するマークを半角カンマ区切りで入力してください。");
+					 }
+					 String marks = in.readLine();
+					 if (marks.indexOf(",") < 0) {
+						 System.err.println("半角カンマ区切りで2種類以上入力してください。");
+						 isErr = true;
+						 continue;
+					 }
+					 String[] split = marks.split(",");
+					 if (split.length < 2 || StringUtils.isBlank(split[0]) || StringUtils.isBlank(split[1])) {
+						 System.err.println("半角カンマ区切りで2種類以上入力してください。");
+						 isErr = true;
+						 continue;
+					 }
+					 USE_MARKS = new ArrayList<String>(Arrays.asList(split));
+					 isErr = false;
+					 break;
+				 }
+			 }
+		} catch (IOException e) {
+			// do nothing;
 		}
 	}
 
@@ -128,32 +181,37 @@ public class Mono {
 			}
 
 			String[] split = input.split("-");
-			try {
-				int row = Integer.parseInt(split[0]);
-				int column = Integer.parseInt(split[1]);
 
-				if (row < 0 || row > Mono.boardHeight) {
-					System.err.println("範囲外の縦行が指定されています：" + row + "行");
-					continue;
-				}
-				if (column < 0 || column > Mono.boardWidth) {
-					System.err.println("範囲外の横列が指定されています：" + column + "列");
-					continue;
-				}
+			if (!checkNumber(split[0])) {
+				System.err.println("縦行は数値で入力してください。");
+				continue;
+			}
 
-				MarkData mark = getMark(row, column);
-				if (mark.getMarkIndex() == DELETE_INDEX) {
-					System.err.println("既にそのマスは消し終わっています。");
-					continue;
-				}
+			if (!checkNumber(split[1])) {
+				System.err.println("横列は数値で入力してください。");
+				continue;
+			}
 
-				if (!checkAdjacent(mark)) {
-					System.err.println("2マス以上繋がっていないと消せません。");
-					continue;
-				}
+			int row = Integer.parseInt(split[0]);
+			int column = Integer.parseInt(split[1]);
 
-			} catch (NumberFormatException e) {
-				System.err.println("縦行、横列は数値で入力してください。");
+			if (row < 0 || row > Mono.boardHeight) {
+				System.err.println("範囲外の縦行が指定されています：" + row + "行");
+				continue;
+			}
+			if (column < 0 || column > Mono.boardWidth) {
+				System.err.println("範囲外の横列が指定されています：" + column + "列");
+				continue;
+			}
+
+			MarkData mark = getMark(row, column);
+			if (mark.getMarkIndex() == DELETE_INDEX) {
+				System.err.println("既にそのマスは消し終わっています。");
+				continue;
+			}
+
+			if (!checkAdjacent(mark)) {
+				System.err.println("2マス以上繋がっていないと消せません。");
 				continue;
 			}
 
@@ -345,6 +403,7 @@ public class Mono {
 			}
 		}
 		System.out.println();
+		System.out.println();
 	}
 
 	/**
@@ -365,7 +424,7 @@ public class Mono {
 	 * 定義されたマークのうち、ランダムで一つ取得する（マーク番号を取得）
 	 * @return ランダムで取得したマーク番号
 	 */
-	private static int getMarkIndex() {
+	private static int getRandomMarkIndex() {
 		int random = RandomUtils.nextInt(USE_MARKS.size());
 		return random;
 	}
@@ -381,6 +440,20 @@ public class Mono {
 			if (DELETE_INDEX != data.getMarkIndex() && checkAdjacent(data)) {
 				return false;
 			}
+		}
+		return true;
+	}
+
+	/**
+	 * 指定された文字列が数値として解釈可能かどうか
+	 * @param number 文字列
+	 * @return 文字列が数値として解釈可能かどうか
+	 */
+	private static boolean checkNumber(String number) {
+		try {
+			Integer.parseInt(number);
+		} catch (NumberFormatException e) {
+			return false;
 		}
 		return true;
 	}
