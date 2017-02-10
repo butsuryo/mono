@@ -77,29 +77,18 @@ public class Mono {
 
 		// 入力受付
 		while(true){
-			changeAction();
+			// ユーザ入力
+			String[] split = getInput();
 
-			// TODO もう消せなくなったら終わりにする
+			// マス変更
+			changeAction(Integer.valueOf(split[0]), Integer.valueOf(split[1]));
+
+			// もう消せなくなったら終わりにする
+			if (judgeNoMoreMove()) {
+				System.out.println("これ以上消せません。終了します。");
+				System.exit(0);
+			}
 		}
-	}
-
-	/**
-	 * マス変更を呼び出し、実施後のボードを出力する
-	 */
-	private static void changeAction() {
-
-		String[] split = getInput();
-
-		int row = Integer.valueOf(split[0]);
-		int column = Integer.valueOf(split[1]);
-
-		// 指定されたマスの現在のマーク
-		MarkData mark = getMark(row, column);
-		processedList = new ArrayList<String>();
-		change(mark);
-
-		// 変更後のボードを再出力
-		output();
 	}
 
 	/**
@@ -158,7 +147,7 @@ public class Mono {
 					continue;
 				}
 
-				if (!check(row, column, mark.getMarkIndex())) {
+				if (!checkAdjacent(mark)) {
 					System.err.println("2マス以上繋がっていないと消せません。");
 					continue;
 				}
@@ -172,7 +161,33 @@ public class Mono {
 		}
 	}
 
-	private static boolean check(int row, int column, int markIndex) {
+	/**
+	 * マス変更を呼び出し、実施後のボードを出力する
+	 * @param row 入力された縦行
+	 * @param column 入力された横列
+	 */
+	private static void changeAction(int row, int column) {
+
+		// 指定されたマスの現在のマーク
+		MarkData mark = getMark(row, column);
+		processedList = new ArrayList<String>();
+		change(mark);
+
+		// 変更後のボードを再出力
+		output();
+	}
+
+	/**
+	 * 指定したmarkのマスが隣接マスのどこかと繋がっているか(同じマークかどうか)
+	 * @param mark 基準マス
+	 * @return 隣接マスのどこかと繋がっているか
+	 */
+	private static boolean checkAdjacent(MarkData mark) {
+
+		int row = mark.getRow();
+		int column = mark.getColumn();
+		int markIndex = mark.getMarkIndex();
+
 		// 基準マスの一個上
 		if (row != 1) {
 			if (checkSameMark(row-1, column, markIndex)) {
@@ -203,6 +218,13 @@ public class Mono {
 		return false;
 	}
 
+	/**
+	 * 指定したrow-columnのマスのマーク番号が、markIndexと同一かどうか
+	 * @param row 調査対象のマスの縦行
+	 * @param column 調査対象のマスの横列
+	 * @param markIndex 比較するマーク番号
+	 * @return マーク番号が、markIndexと同一かどうか
+	 */
 	private static boolean checkSameMark(int row, int column, int markIndex) {
 		MarkData mark = getMark(row, column);
 		return markIndex == mark.getMarkIndex();
@@ -346,6 +368,21 @@ public class Mono {
 	private static int getMarkIndex() {
 		int random = RandomUtils.nextInt(USE_MARKS.size());
 		return random;
+	}
+
+	/**
+	 * noMoreMoveかどうか判定する
+	 * @return noMoreMoveかどうか
+	 */
+	private static boolean judgeNoMoreMove() {
+
+		for (MarkData data : list) {
+			// 繋がっているマスが1つでも見つかった時点でfalse
+			if (DELETE_INDEX != data.getMarkIndex() && checkAdjacent(data)) {
+				return false;
+			}
+		}
+		return true;
 	}
 }
 
