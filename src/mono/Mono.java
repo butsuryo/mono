@@ -28,6 +28,10 @@ public class Mono {
 	private static int boardWidth = 10;
 	/** 縦幅 */
 	private static int boardHeight = 10;
+
+	private static int treasureWidth = 2;
+	private static int treasureHeight = 3;
+
 	/** 現在のマス状況 */
 	private static List<MarkData> list = new ArrayList<>();
 	/** 処理済みリスト */
@@ -49,9 +53,12 @@ public class Mono {
 		// ゲームボードをランダムで新規作成
 		for (int i=1; i<=boardHeight; i++) {
 			for (int j=1; j<=boardWidth; j++) {
-				list.add(new MarkData(i, j, getRandomMarkIndex(), USE_MARKS));
+				list.add(new MarkData(i, j, getRandomMarkIndex()));
 			}
 		}
+
+		// TODO test
+		putTreasure();
 
 		// 初回出力
 		output();
@@ -397,7 +404,12 @@ public class Mono {
 					System.out.print(" ");
 				}
 			}
-			System.out.print(getMarkSymbol(data.getMarkIndex()));
+			// TODO test
+			if (data.isTreasure()) {
+				System.out.print("■");
+			} else {
+				System.out.print(getMarkSymbol(data.getMarkIndex()));
+			}
 			if (data.getColumn() == boardWidth) {
 				System.out.println();
 			}
@@ -457,6 +469,60 @@ public class Mono {
 		}
 		return true;
 	}
+
+	private static void putTreasure() {
+
+		// 10*10の場合は5個
+		int treasureNum = 5;
+
+		for (int i=0; i<treasureNum; i++) {
+
+			// 縦>横を想定したそれぞれの幅
+			int rowNum = treasureHeight > treasureWidth ? treasureHeight : treasureWidth;
+			int columnNum = treasureHeight < treasureWidth ? treasureHeight : treasureWidth;
+
+			// 縦>横か、縦<横か、ランダムで決定する
+			if (RandomUtils.nextBoolean()) {
+
+				// 縦<横になるように各幅を入れ替える
+				rowNum = treasureHeight < treasureWidth ? treasureHeight : treasureWidth;
+				columnNum = treasureHeight > treasureWidth ? treasureHeight : treasureWidth;
+			}
+
+			// 基準マスになり得る範囲
+			int okRowEnd = boardHeight - rowNum + 1;
+			int okColumnEnd = boardWidth - columnNum + 1;
+
+			// 基準マスをランダム決定
+			int randomRow;
+			int randomColumn;
+			while(true) {
+				// nextIntは0~argのうち1つを返すので、引数は-1、返り値は+1する
+				randomRow = RandomUtils.nextInt(okRowEnd - 1) + 1;
+				randomColumn = RandomUtils.nextInt(okColumnEnd - 1) + 1;
+
+				// 既に配置したオタカラと被る場合はランダム引き直し
+				for (int r=randomRow; r<rowNum+randomRow; r++) {
+					for (int c=randomColumn; c<columnNum+randomColumn; c++) {
+						MarkData data = getMark(r, c);
+						if (data.isTreasure()) {
+							continue;
+						}
+					}
+				}
+				break;
+			}
+
+			// お宝を追加
+			for (int r=randomRow; r<rowNum+randomRow; r++) {
+				for (int c=randomColumn; c<columnNum+randomColumn; c++) {
+					MarkData data = getMark(r, c);
+					data.setTreasure(true);
+				}
+			}
+		}
+	}
+
 }
 
 /**
@@ -467,11 +533,13 @@ class MarkData {
 	private int row;
 	private int column;
 	private int markIndex;
+	private boolean isTreasure;
 
-	public MarkData(int row, int column, int markIndex, List<String> marks) {
+	public MarkData(int row, int column, int markIndex) {
 		this.row = row;
 		this.column = column;
 		this.markIndex = markIndex;
+		isTreasure = false;
 	}
 
 	public int getColumn() {
@@ -488,6 +556,14 @@ class MarkData {
 
 	public void setMarkIndex(int markIndex) {
 		this.markIndex = markIndex;
+	}
+
+	public boolean isTreasure() {
+		return isTreasure;
+	}
+
+	public void setTreasure(boolean isTreasure) {
+		this.isTreasure = isTreasure;
 	}
 
 	/**
